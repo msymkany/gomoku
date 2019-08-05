@@ -2,7 +2,26 @@
   let res = await fetch('/api/board');
   res = await res.json();
 
-  const {board, win} = res;
+  const {board, win, depth, moves, double_three} = res;
+
+  const doubleThreeInput = document.querySelector('#double_three');
+  doubleThreeInput.checked = double_three;
+
+  const depthSelector = document.querySelector('#depth');
+  for (let i = 1; i <= maxDepth; i++) {
+    const option = document.createElement('option');
+    option.text = i.toString();
+    depthSelector.appendChild(option);
+  }
+  depthSelector.value = depth;
+
+  const movesSelector = document.querySelector('#moves');
+  for (let i = 1; i <= maxMoves; i++) {
+    const option = document.createElement('option');
+    option.text = i.toString();
+    movesSelector.appendChild(option);
+  }
+  movesSelector.value = moves;
 
   const boardDiv = document.querySelector('.board');
 

@@ -7,14 +7,67 @@
   flex-direction: row;
 }
 
+/* Side panel */
+
 .sidepanel {
   flex-grow: 1;
   display: flex;
+  flex-direction: row;
+  flex-wrap: wrap;
+  align-items: flex-start;
+}
+
+.sidepanel button {
+  margin: 5px 0;
+  width: 100px;
+}
+
+.sidepanel > div {
+  width: 50%;
+  display: flex;
   flex-direction: column;
+  justify-content: center;
   align-items: center;
 }
 
+.notification {
+  width: 220px;
+  height: 350px;
+  overflow: auto;
+}
+
+.notification p {
+  text-align: center;
+  border: 1px solid rgba(0,0,0,0.2);
+  border-radius: 10px;
+  box-shadow: 2px 2px rgba(0,0,0,0.2);
+  margin: 5px;
+}
+
+::-webkit-scrollbar {
+    width: 0;  /* Remove scrollbar space */
+    background: transparent;  /* Optional: just make scrollbar invisible */
+}
+
+.difficulty {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+}
+
+.setting {
+  width: 150px;
+  display: flex;
+  flex-direction: row;
+  justify-content: space-between;
+  margin: 10px 0;
+}
+
+/* Board */
+
 .board {
+  position: relative;
   flex-grow: 1;
   display: flex;
   justify-content: center;

@@ -4,23 +4,38 @@ import (
     "container/heap"
 )
 
+func validX(x int) bool {
+    if x >= 0 && x < BoardWidth {
+        return true
+    }
+    return false
+}
+
+func validY(y int) bool {
+    if y >= 0 && y < BoardHeight {
+        return true
+    }
+    return false
+}
+
 func fiveInARow(y, x, player int) (bool, *[]Coord) {
     inARow := 0
     var line []Coord
 
     // Horizontal
-    for tempX := x - 4; tempX <= x+4; tempX++ {
-        if tempX >= BoardWidth || inARow == 5 {
+    for tempX := x - 4; tempX <= x+4 && tempX < BoardWidth; tempX++ {
+        if inARow >= 5 && validX(tempX) && board[y][tempX] != player {
             break
         }
-        if tempX >= 0 && board[y][tempX] == player {
+        if validX(tempX) && board[y][tempX] == player {
             inARow++
             line = append(line, Coord{y, tempX})
         } else {
             inARow = 0
+            line = []Coord{}
         }
     }
-    if inARow == 5 {
+    if inARow >= 5 {
         return true, &line
     } else {
         inARow = 0
@@ -28,18 +43,19 @@ func fiveInARow(y, x, player int) (bool, *[]Coord) {
     }
 
     // Vertical
-    for tempY := y - 4; tempY <= y+4; tempY++ {
-        if tempY >= BoardHeight || inARow == 5 {
+    for tempY := y - 4; tempY <= y+4 && tempY < BoardHeight; tempY++ {
+        if inARow >= 5 && validY(tempY) && board[tempY][x] != player {
             break
         }
-        if tempY >= 0 && board[tempY][x] == player {
+        if validY(tempY) && board[tempY][x] == player {
             inARow++
             line = append(line, Coord{tempY, x})
         } else {
             inARow = 0
+            line = []Coord{}
         }
     }
-    if inARow == 5 {
+    if inARow >= 5 {
         return true, &line
     } else {
         inARow = 0
@@ -47,18 +63,20 @@ func fiveInARow(y, x, player int) (bool, *[]Coord) {
     }
 
     // Diagonal 1
-    for tempY, tempX := y-4, x-4; tempX <= x+4; tempY, tempX = tempY+1, tempX+1 {
-        if tempY >= BoardHeight || tempX >= BoardWidth || inARow == 5 {
+    for tempY, tempX := y-4, x-4; tempX <= x+4 && tempY < BoardHeight && tempX < BoardWidth; tempY, tempX = tempY+1, tempX+1 {
+        if inARow >= 5 && validY(tempY) && validX(tempX) &&
+            board[tempY][tempX] != player {
             break
         }
-        if tempX >= 0 && tempY >= 0 && board[tempY][tempX] == player {
+        if validY(tempY) && validX(tempX) && board[tempY][tempX] == player {
             inARow++
             line = append(line, Coord{tempY, tempX})
         } else {
             inARow = 0
+            line = []Coord{}
         }
     }
-    if inARow == 5 {
+    if inARow >= 5 {
         return true, &line
     } else {
         inARow = 0
@@ -66,18 +84,20 @@ func fiveInARow(y, x, player int) (bool, *[]Coord) {
     }
 
     // Diagonal 2
-    for tempY, tempX := y+4, x-4; tempX <= x+4; tempY, tempX = tempY-1, tempX+1 {
-        if tempY >= BoardHeight || tempX >= BoardWidth || inARow == 5 {
+    for tempY, tempX := y+4, x-4; tempX <= x+4 && tempY >= 0 && tempX < BoardWidth; tempY, tempX = tempY-1, tempX+1 {
+        if inARow >= 5 && validY(tempY) && validX(tempX) &&
+            board[tempY][tempX] != player {
             break
         }
-        if tempY >= 0 && tempX >= 0 && board[tempY][tempX] == player {
+        if validY(tempY) && validX(tempX) && board[tempY][tempX] == player {
             inARow++
             line = append(line, Coord{tempY, tempX})
         } else {
             inARow = 0
+            line = []Coord{}
         }
     }
-    if inARow == 5 {
+    if inARow >= 5 {
         return true, &line
     } else {
         inARow = 0
@@ -190,11 +210,18 @@ func checkScore(score *float64, row, openEnds *int, player int) {
     *openEnds = 0
 }
 
+func currentPlayer(player1, player2 int) int {
+    if player1 == player2 {
+        return AI
+    }
+    return HUMAN
+}
+
 func getScoreFor(player1, player2, startX, endX, startY, endY int) float64 {
     score := 0.0
     row, openEnds := 0, 0
 
-    // Vertical
+    // Horizontal
     for y := startY; y < endY; y++ {
         for x := startX; x < endX; x++ {
             checkPlayer(&score, &row, &openEnds, y, x, player1, currentPlayer(player1, player2))
@@ -202,7 +229,7 @@ func getScoreFor(player1, player2, startX, endX, startY, endY int) float64 {
         checkScore(&score, &row, &openEnds, currentPlayer(player1, player2))
     }
 
-    // Horizontal
+    // Vertical
     for x := startX; x < endX; x++ {
         for y := startY; y < endY; y++ {
             checkPlayer(&score, &row, &openEnds, y, x, player1, currentPlayer(player1, player2))
@@ -265,6 +292,18 @@ func calculateScoreFor(player, y, x int) float64 {
     return score - getScoreFor(player, changePlayer(player), startX, endX, startY, endY)
 }
 
+func doubleThree(y, x, player int) bool {
+    double := false
+    board[y][x] = player
+    if doubleThreeRule &&
+        ((player == AI && freeThreeAI) || (player == HUMAN && freeThreeHuman)) &&
+        checkForFreeThree(y, x, player) {
+        double = true
+    }
+    board[y][x] = EMPTY
+    return double
+}
+
 func generateMoves(player int) Poses {
     var moves Poses
     heap.Init(&moves)
@@ -283,7 +322,8 @@ func generateMoves(player int) Poses {
 
     for y := 0; y < BoardHeight; y++ {
         for x := 0; x < BoardWidth; x++ {
-            if board[y][x] == EMPTY && adjacentNotEmpty(y, x) {
+            if board[y][x] == EMPTY && adjacentNotEmpty(y, x) &&
+                doubleThree(y, x, player) == false {
                 score1 := calculateScoreFor(player, y, x)
                 score2 := calculateScoreFor(changePlayer(player), y, x)
                 if score1 < score2 {
@@ -295,11 +335,13 @@ func generateMoves(player int) Poses {
         }
     }
 
-    last := heap.Pop(&moves).(Pos)
-    if last.Score > 50000000 {
-        return Poses{last}
+    if moves.Len() > 0 {
+        last := heap.Pop(&moves).(Pos)
+        if last.Score > 50000000 {
+            return Poses{last}
+        }
+        heap.Push(&moves, last)
     }
-    heap.Push(&moves, last)
 
     return moves
 }
@@ -311,22 +353,9 @@ func changePlayer(player int) int {
     return AI
 }
 
-func currentPlayer(player1, player2 int) int {
-    if player1 == player2 {
-        return AI
-    }
-    return HUMAN
-}
-
 func minimax(player, depth int) Pos {
     var bestScore float64
     y, x, score := -1, -1, 0.0
-    var lastTurn int
-    if depth%2 == 0 {
-        lastTurn = player
-    } else {
-        lastTurn = changePlayer(player)
-    }
 
     if player == AI {
         bestScore = -1000000000
@@ -342,8 +371,8 @@ func minimax(player, depth int) Pos {
 
         board[move.Y][move.X] = player
         if depth == 1 {
-            score = getScoreFor(AI, lastTurn, 0, BoardWidth, 0, BoardHeight) -
-                getScoreFor(HUMAN, lastTurn, 0, BoardWidth, 0, BoardHeight)
+            score = getScoreFor(AI, changePlayer(player), 0, BoardWidth, 0, BoardHeight) -
+                getScoreFor(HUMAN, changePlayer(player), 0, BoardWidth, 0, BoardHeight)
         } else {
             score = minimax(changePlayer(player), depth-1).Score
         }

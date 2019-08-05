@@ -1,5 +1,6 @@
 package main
 
+// Poses class
 type Poses []Pos
 
 func (moves Poses) Len() int {
