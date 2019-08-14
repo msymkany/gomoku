@@ -39,12 +39,17 @@ func validatePosParams(yKey, xKey string) (int, int, bool) {
 }
 
 func api(w http.ResponseWriter, r *http.Request) {
-    var aiMove = Pos{-1, -1, 0}
+    var aiMove = Move{nil, 0}
+    var isWin = false
+    var debug *Debug = nil
+    if debugMode {
+        debug = &Debug{0, 0, nil, 0, -1, []*Debug{}}
+    }
     var line *[]Coord
     var notification string
+
     timerStart := time.Now().UnixNano()
     writer = w
-    isWin := false
 
     query := r.URL.Query()
     y, x, valid := validatePosParams(query.Get("y"), query.Get("x"))
@@ -52,27 +57,38 @@ func api(w http.ResponseWriter, r *http.Request) {
         return
     }
 
-    board[y][x] = HUMAN
-    if doubleThreeRule && freeThreeHuman && checkForFreeThree(y, x, HUMAN) {
-        board[y][x] = EMPTY
+    pos := &Position{captureMove(y, x, HUMAN), y, x}
+    if doubleThree(pos, HUMAN) {
         notification = fmt.Sprintf("No double-three")
     } else {
-        isWin, line = fiveInARow(y, x, HUMAN)
-        if isWin == false {
-            aiMove = minimax(AI, Depth)
-            board[aiMove.Y][aiMove.X] = AI
-            if doubleThreeRule {
-                resetFreeThrees()
-            }
-            isWin, line = fiveInARow(aiMove.Y, aiMove.X, AI)
-        } else {
+        makeMove(pos, HUMAN)
+        if captures[HUMAN] == 10 {
             notification = "Blue won"
+            winByCapture = 1
+        } else {
+            isWin, line = fiveInARow(y, x, HUMAN)
+            if isWin == false {
+                aiMove = minimax(AI, Depth, debug)
+                makeMove(aiMove.pos, AI)
+                if doubleThreeRule {
+                    resetFreeThrees()
+                }
+                if captures[AI] == 10 {
+                    notification = "Red won"
+                    winByCapture = 2
+                } else {
+                    isWin, line = fiveInARow(aiMove.pos.Y, aiMove.pos.X, AI)
+                    if isWin == true {
+                        notification = "Red won"
+                    }
+                }
+            } else {
+                notification = "Blue won"
+            }
         }
+
         if isWin == true {
             win = line
-            if notification == "" {
-                notification = "Red won"
-            }
         }
 
         timerEnd := time.Now().UnixNano()
@@ -81,22 +97,47 @@ func api(w http.ResponseWriter, r *http.Request) {
     }
 
     data, _ := json.Marshal(struct {
-        Y            int      `json:"y"`
-        X            int      `json:"x"`
-        Win          *[]Coord `json:"win"`
-        Notification string   `json:"notification"`
-    }{aiMove.Y, aiMove.X, win, notification})
+        BluePos      *Position   `json:"blue_pos"`
+        RedPos       *Position   `json:"red_pos"`
+        Win          *[]Coord    `json:"win"`
+        WinByCapture int         `json:"win_by_capture"`
+        Notification string      `json:"notification"`
+        Captures     map[int]int `json:"captures"`
+        Debug        *Debug      `json:"debug"`
+    }{
+        pos,
+        aiMove.pos,
+        win,
+        winByCapture,
+        notification,
+        captures,
+        debug,
+    })
     fmt.Fprintln(w, string(data))
 }
 
 func apiBoard(w http.ResponseWriter, r *http.Request) {
     data, _ := json.Marshal(struct {
-        Board       *[BoardHeight][BoardWidth]int `json:"board"`
-        Win         *[]Coord                      `json:"win"`
-        Depth       int                           `json:"depth"`
-        Moves       int                           `json:"moves"`
-        DoubleThree bool                          `json:"double_three"`
-    }{&board, win, Depth, MovesCheck, doubleThreeRule})
+        Board        *[BoardHeight][BoardWidth]int `json:"board"`
+        Win          *[]Coord                      `json:"win"`
+        WinByCapture int                           `json:"win_by_capture"`
+        Depth        int                           `json:"depth"`
+        Moves        int                           `json:"moves"`
+        DoubleThree  bool                          `json:"double_three"`
+        CaptureRule  bool                          `json:"capture_rule"`
+        Captures     map[int]int                   `json:"captures"`
+        DebugMode    bool                          `json:"debug_mode"`
+    }{
+        &board,
+        win,
+        winByCapture,
+        Depth,
+        MovesCheck,
+        doubleThreeRule,
+        captureRule,
+        captures,
+        debugMode,
+    })
     fmt.Fprintln(w, string(data))
 }
 
@@ -104,11 +145,15 @@ func apiReset(w http.ResponseWriter, r *http.Request) {
     board = [BoardHeight][BoardWidth]int{}
     board[BoardHeight/2][BoardWidth/2] = AI
     win = nil
+    winByCapture = 0
 
     if doubleThreeRule {
         freeThreeAI = false
         freeThreeHuman = false
     }
+
+    captures[AI] = 0
+    captures[HUMAN] = 0
 
     data, _ := json.Marshal(board)
     fmt.Fprintln(w, string(data))
@@ -142,34 +187,40 @@ func apiDifficulty(w http.ResponseWriter, r *http.Request) {
     depth := r.URL.Query().Get("depth")
     moves := r.URL.Query().Get("moves")
     newDepth, newMoves, valid := validateDifficultyParams(depth, moves)
-    if valid == false {
-        return
+    if valid {
+        Depth = newDepth
+        MovesCheck = newMoves
     }
-
-    Depth = newDepth
-    MovesCheck = newMoves
 }
 
-func apiDoubleThree(w http.ResponseWriter, r *http.Request) {
+func changeSetting(w http.ResponseWriter, r *http.Request, boolVar *bool) {
     writer = w
 
     check := r.URL.Query().Get("check")
 
-    if check == "" {
+    if check != "" && (check == "true" || check == "false") {
+        if check == "true" {
+            *boolVar = true
+        } else {
+            *boolVar = false
+        }
+    } else if check == "" {
         handleError(errors.New("no get params"))
-        return
-    }
-
-    if check != "true" && check != "false" {
-        handleError(errors.New("invalid params"))
-        return
-    }
-
-    if check == "true" {
-        doubleThreeRule = true
     } else {
-        doubleThreeRule = false
+        handleError(errors.New("invalid params"))
     }
+}
+
+func apiDoubleThree(w http.ResponseWriter, r *http.Request) {
+    changeSetting(w, r, &doubleThreeRule)
+}
+
+func apiCapture(w http.ResponseWriter, r *http.Request) {
+    changeSetting(w, r, &captureRule)
+}
+
+func apiDebug(w http.ResponseWriter, r *http.Request) {
+    changeSetting(w, r, &debugMode)
 }
 
 func scenario1(w http.ResponseWriter, r *http.Request) {
@@ -232,8 +283,10 @@ func main() {
     http.HandleFunc("/api", api)
     http.HandleFunc("/api/board", apiBoard)
     http.HandleFunc("/api/reset", apiReset)
-    http.HandleFunc("/api/difficulty", apiDifficulty)
-    http.HandleFunc("/api/rules/double_three", apiDoubleThree)
+    http.HandleFunc("/api/settings/difficulty", apiDifficulty)
+    http.HandleFunc("/api/settings/double_three", apiDoubleThree)
+    http.HandleFunc("/api/settings/capture", apiCapture)
+    http.HandleFunc("/api/settings/debug", apiDebug)
     http.HandleFunc("/api/scenario1", scenario1)
     http.HandleFunc("/api/scenario2", scenario2)
     log.Fatal(http.ListenAndServe(":8080", nil))

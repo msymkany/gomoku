@@ -1,25 +1,25 @@
 package main
 
-// Poses class
-type Poses []Pos
+// Moves class
+type Moves []Move
 
-func (moves Poses) Len() int {
+func (moves Moves) Len() int {
     return len(moves)
 }
 
-func (moves Poses) Less(i, j int) bool {
-    return moves[i].Score > moves[j].Score
+func (moves Moves) Less(i, j int) bool {
+    return moves[i].score > moves[j].score
 }
 
-func (moves Poses) Swap(i, j int) {
+func (moves Moves) Swap(i, j int) {
     moves[i], moves[j] = moves[j], moves[i]
 }
 
-func (moves *Poses) Push(el interface{}) {
-    *moves = append(*moves, el.(Pos))
+func (moves *Moves) Push(el interface{}) {
+    *moves = append(*moves, el.(Move))
 }
 
-func (moves *Poses) Pop() interface{} {
+func (moves *Moves) Pop() interface{} {
     item := (*moves)[moves.Len()-1]
     *moves = (*moves)[0 : moves.Len()-1]
     return item

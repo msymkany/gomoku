@@ -8,7 +8,7 @@
 <body>
 <div class="wrapper">
     <div class="sidepanel">
-        <h1 style="width: 100%; text-align: center">Game</h1>
+        <h1>Game</h1>
         <div>
             <h3>Notifications</h3>
             <div class="notification"></div>
@@ -19,7 +19,19 @@
             <button onclick="loadScenario2()">Scenario2</button>
             <div class="setting">
                 <label for="double_three">Double-three rule</label>
-                <input type="checkbox" id="double_three" onchange="changeDoubleThree()">
+                <input type="checkbox" id="double_three" onchange="changeDoubleThreeRule()">
+            </div>
+            <div class="difficulty">
+                <div class="setting">
+                    <label for="capture_rule">Capture</label>
+                    <input type="checkbox" id="capture_rule" onchange="changeCaptureRule()">
+                </div>
+                <div class="setting capture-rule">
+                    <div class="cell blue"><span></span></div>
+                    <div class="cell" id="blue_capture">0</div>
+                    <div class="cell red"><span></span></div>
+                    <div class="cell" id="red_capture">0</div>
+                </div>
             </div>
             <div class="difficulty">
                 <h4>Difficulty</h4>
@@ -32,9 +44,18 @@
                     <select id="moves" onchange="changeDifficulty()"></select>
                 </div>
             </div>
+            <div class="setting">
+                <label for="debug_mode">Debug</label>
+                <input type="checkbox" id="debug_mode" onchange="changeDebugMode()">
+            </div>
         </div>
     </div>
-    <div class="board"></div>
+    <div id="board"></div>
+</div>
+<div class="wrapper debug-wrapper">
+    <h1>Debug</h1>
+    <div class="debug-panel">
+    </div>
 </div>
 <script type="text/javascript" src="js/showWinner.js"></script>
 <script type="text/javascript" src="js/selectCell.js"></script>
@@ -42,8 +63,8 @@
 <script type="text/javascript" src="js/createGame.js"></script>
 <script type="text/javascript" src="js/resetGame.js"></script>
 <script type="text/javascript" src="js/loadScenario.js"></script>
-<script type="text/javascript" src="js/changeDifficulty.js"></script>
-<script type="text/javascript" src="js/changeRules.js"></script>
+<script type="text/javascript" src="js/changeSettings.js"></script>
 <script type="text/javascript" src="js/addNotification.js"></script>
+<script type="text/javascript" src="js/updateDebug.js"></script>
 </body>
 </html>

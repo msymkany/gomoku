@@ -7,6 +7,11 @@
   flex-direction: row;
 }
 
+h1 {
+  width: 100%;
+  text-align: center;
+}
+
 /* Side panel */
 
 .sidepanel {
@@ -38,15 +43,15 @@
 
 .notification p {
   text-align: center;
-  border: 1px solid rgba(0,0,0,0.2);
+  border: 1px solid rgba(0, 0, 0, 0.2);
   border-radius: 10px;
-  box-shadow: 2px 2px rgba(0,0,0,0.2);
+  box-shadow: 2px 2px rgba(0, 0, 0, 0.2);
   margin: 5px;
 }
 
 ::-webkit-scrollbar {
-    width: 0;  /* Remove scrollbar space */
-    background: transparent;  /* Optional: just make scrollbar invisible */
+  width: 0; /* Remove scrollbar space */
+  background: transparent; /* Optional: just make scrollbar invisible */
 }
 
 .difficulty {
@@ -64,15 +69,30 @@
   margin: 10px 0;
 }
 
+.capture-rule .cell {
+  border: none;
+  flex-grow: 1;
+}
+
+.capture-rule .cell.blue,
+.capture-rule .cell.red {
+  max-width: 25px;
+  flex-grow: 1;
+}
+
 /* Board */
 
-.board {
+#board, .board {
   position: relative;
   flex-grow: 1;
   display: flex;
   justify-content: center;
   align-items: center;
   flex-direction: column;
+}
+
+.board {
+  flex-grow: 0;
 }
 
 .row {
@@ -91,6 +111,11 @@
   display: flex;
   justify-content: center;
   align-items: center;
+}
+
+.cell.small {
+  width: 10px;
+  height: 10px;
 }
 
 .cell:not(:first-child) {
@@ -119,4 +144,58 @@
 
 .cell.win > span {
   filter: saturate(200%) contrast(200%);
+}
+
+.cell.placed > span {
+  filter: brightness(60%);
+}
+
+/* Debug */
+
+.debug-wrapper {
+  flex-wrap: wrap;
+}
+
+.debug-panel {
+  justify-content: flex-start;
+  width: 100%;
+  display: flex;
+  flex-direction: row;
+  overflow: auto;
+}
+
+.debug-el {
+  display: flex;
+  flex-direction: row;
+}
+
+.scores {
+  width: 100px;
+  min-width: 100px;
+  height: 256px;
+  overflow: auto;
+  margin: 0 10px;
+  box-sizing: border-box;
+}
+
+.score-button {
+  outline: none;
+  padding: 5px 0;
+  margin-bottom: 5px;
+  width: 95px;
+  background-color: white;
+  border: 1px solid #ddd;
+  box-shadow: 1px 1px #ddd;
+  border-radius: 5px;
+}
+
+.score-button:active, .score-button.active {
+  background-color: #ddd;
+  box-shadow: none;
+}
+
+.score-num {
+  margin-bottom: 5px;
+    text-align: center;
+    width: 210px;
 }

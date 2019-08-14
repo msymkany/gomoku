@@ -121,24 +121,6 @@ func adjacentNotEmpty(y, x int) bool {
     return false
 }
 
-func checkForWin(player int) (int, int, bool) {
-    var win bool
-    for y := 0; y < BoardHeight; y++ {
-        for x := 0; x < BoardWidth; x++ {
-            if board[y][x] == EMPTY && adjacentNotEmpty(y, x) {
-                board[y][x] = player
-                win, _ = fiveInARow(y, x, player)
-                if win == true {
-                    board[y][x] = EMPTY
-                    return y, x, true
-                }
-                board[y][x] = EMPTY
-            }
-        }
-    }
-    return 0, 0, false
-}
-
 func checkForAI(player int, scoreAI, scroreHuman float64) float64 {
     if player == AI {
         return scoreAI
@@ -272,73 +254,148 @@ func getScoreFor(player1, player2, startX, endX, startY, endY int) float64 {
     return score
 }
 
-func calculateScoreFor(player, y, x int) float64 {
-    board[y][x] = player
+func calculateScoreFor(pos *Position, player int) float64 {
+    score1, score2 := 0., 0.
+    makeMove(pos, player)
     startX, endX, startY, endY := 0, BoardWidth, 0, BoardHeight
-    if x > 4 {
-        startX = x - 4
+    if pos.X > 4 {
+        startX = pos.X - 4
     }
-    if y > 4 {
-        startY = y - 4
+    if pos.Y > 4 {
+        startY = pos.Y - 4
     }
-    if x < BoardWidth-5 {
-        endX = x + 5
+    if pos.X < BoardWidth-5 {
+        endX = pos.X + 5
     }
-    if y < BoardHeight-5 {
-        endY = y + 5
+    if pos.Y < BoardHeight-5 {
+        endY = pos.Y + 5
     }
-    score := getScoreFor(player, changePlayer(player), startX, endX, startY, endY)
-    board[y][x] = EMPTY
-    return score - getScoreFor(player, changePlayer(player), startX, endX, startY, endY)
+    if pos.Capture != nil {
+        score11 := getCaptureScore(player)
+        score12 := getScoreFor(player, changePlayer(player), startX, endX, startY, endY)
+        if score11 > score12 {
+            score1 = score11
+        } else {
+            score1 = score12
+        }
+    } else {
+        score1 = getScoreFor(player, changePlayer(player), startX, endX, startY, endY)
+    }
+    undoMove(pos, player)
+    if pos.Capture != nil {
+        score21 := getCaptureScore(player)
+        score22 := getScoreFor(player, changePlayer(player), startX, endX, startY, endY)
+        if score21 > score22 {
+            score2 = score21
+        } else {
+            score2 = score22
+        }
+    } else {
+        score2 = getScoreFor(player, changePlayer(player), startX, endX, startY, endY)
+    }
+    return score1 - score2
 }
 
-func doubleThree(y, x, player int) bool {
+func doubleThree(pos *Position, player int) bool {
     double := false
-    board[y][x] = player
+    if pos.Capture != nil {
+        return false
+    }
+    board[pos.Y][pos.X] = player
     if doubleThreeRule &&
         ((player == AI && freeThreeAI) || (player == HUMAN && freeThreeHuman)) &&
-        checkForFreeThree(y, x, player) {
+        checkForFreeThree(pos.Y, pos.X, player) {
         double = true
     }
-    board[y][x] = EMPTY
+    board[pos.Y][pos.X] = EMPTY
     return double
 }
 
-func generateMoves(player int) Poses {
-    var moves Poses
+func getFinalScore(pos *Position, player int) (score float64) {
+    if pos.Capture != nil {
+        score1 := getCaptureScore(AI) - getCaptureScore(HUMAN)
+        score2 := getScoreFor(AI, changePlayer(player), 0, BoardWidth, 0, BoardHeight) -
+            getScoreFor(HUMAN, changePlayer(player), 0, BoardWidth, 0, BoardHeight)
+
+        score = getBestScore(score1, score2, player)
+    } else {
+        score = getScoreFor(AI, changePlayer(player), 0, BoardWidth, 0, BoardHeight) -
+            getScoreFor(HUMAN, changePlayer(player), 0, BoardWidth, 0, BoardHeight)
+    }
+    return
+}
+
+func checkForWin(player int) *Position {
+    var win bool
+    var capture *Capture = nil
+    for y := 0; y < BoardHeight; y++ {
+        for x := 0; x < BoardWidth; x++ {
+            if board[y][x] == EMPTY && adjacentNotEmpty(y, x) {
+                board[y][x] = player
+                win, _ = fiveInARow(y, x, player)
+                if win == true {
+                    board[y][x] = EMPTY
+                    return &Position{nil, y, x}
+                }
+                capture = finalCapture(y, x, player)
+                if capture != nil {
+                    return &Position{capture, y, x}
+                }
+                board[y][x] = EMPTY
+            }
+        }
+    }
+    return nil
+}
+
+func checkIfThereWin(player int) (win bool, pos *Position, score float64) {
+    win = false
+
+    pos = checkForWin(player)
+    if pos == nil {
+        pos = checkForWin(changePlayer(player))
+    }
+
+    if pos != nil {
+        win = true
+        makeMove(pos, player)
+        score = getFinalScore(pos, player)
+        undoMove(pos, player)
+    }
+
+    return
+}
+
+func generateMoves(player int) Moves {
+    var moves Moves
     heap.Init(&moves)
 
-    y, x, isWin := checkForWin(player)
-    if isWin == false {
-        y, x, isWin = checkForWin(changePlayer(player))
-    }
-    if isWin == true {
-        board[y][x] = player
-        score := getScoreFor(AI, changePlayer(player), 0, BoardWidth, 0, BoardHeight) -
-            getScoreFor(HUMAN, changePlayer(player), 0, BoardWidth, 0, BoardHeight)
-        board[y][x] = EMPTY
-        return Poses{{y, x, score}}
+    win, pos, score := checkIfThereWin(player)
+    if win {
+        return Moves{{pos, score}}
     }
 
     for y := 0; y < BoardHeight; y++ {
         for x := 0; x < BoardWidth; x++ {
-            if board[y][x] == EMPTY && adjacentNotEmpty(y, x) &&
-                doubleThree(y, x, player) == false {
-                score1 := calculateScoreFor(player, y, x)
-                score2 := calculateScoreFor(changePlayer(player), y, x)
-                if score1 < score2 {
-                    heap.Push(&moves, Pos{y, x, score1})
-                } else {
-                    heap.Push(&moves, Pos{y, x, score2})
+            if board[y][x] == EMPTY && adjacentNotEmpty(y, x) {
+                pos = &Position{captureMove(y, x, player), y, x}
+                if doubleThree(pos, player) == false {
+                    score1 := calculateScoreFor(pos, player)
+                    score2 := calculateScoreFor(pos, changePlayer(player))
+                    if score1 < score2 {
+                        heap.Push(&moves, Move{pos, score1})
+                    } else {
+                        heap.Push(&moves, Move{pos, score2})
+                    }
                 }
             }
         }
     }
 
     if moves.Len() > 0 {
-        last := heap.Pop(&moves).(Pos)
-        if last.Score > 50000000 {
-            return Poses{last}
+        last := heap.Pop(&moves).(Move)
+        if last.score > 50000000 {
+            return Moves{last}
         }
         heap.Push(&moves, last)
     }
@@ -353,9 +410,36 @@ func changePlayer(player int) int {
     return AI
 }
 
-func minimax(player, depth int) Pos {
+func getBestScore(score1, score2 float64, player int) float64 {
+    if (player == AI && score1 > score2) ||
+        (player == HUMAN && score1 < score2) {
+        return score1
+    }
+    return score2
+}
+
+func makeMove(pos *Position, player int) {
+    board[pos.Y][pos.X] = player
+    if pos.Capture != nil {
+        board[pos.Capture.Pos[0].Y][pos.Capture.Pos[0].X] = EMPTY
+        board[pos.Capture.Pos[1].Y][pos.Capture.Pos[1].X] = EMPTY
+        captures[player] += 2
+    }
+}
+
+func undoMove(pos *Position, player int) {
+    if pos.Capture != nil {
+        captures[player] -= 2
+        board[pos.Capture.Pos[0].Y][pos.Capture.Pos[0].X] = pos.Capture.Enemy
+        board[pos.Capture.Pos[1].Y][pos.Capture.Pos[1].X] = pos.Capture.Enemy
+    }
+    board[pos.Y][pos.X] = EMPTY
+}
+
+func minimax(player, depth int, debug *Debug) Move {
     var bestScore float64
-    y, x, score := -1, -1, 0.0
+    var pos *Position = nil
+    score := 0.0
 
     if player == AI {
         bestScore = -1000000000
@@ -367,22 +451,38 @@ func minimax(player, depth int) Pos {
 
     movesLen := possibleMoves.Len()
     for i := 0; movesLen > 0 && i < MovesCheck; movesLen, i = movesLen-1, i+1 {
-        move := heap.Pop(&possibleMoves).(Pos)
+        move := heap.Pop(&possibleMoves).(Move)
 
-        board[move.Y][move.X] = player
-        if depth == 1 {
-            score = getScoreFor(AI, changePlayer(player), 0, BoardWidth, 0, BoardHeight) -
-                getScoreFor(HUMAN, changePlayer(player), 0, BoardWidth, 0, BoardHeight)
-        } else {
-            score = minimax(changePlayer(player), depth-1).Score
+        makeMove(move.pos, player)
+        if debugMode {
+            debug.Debug = append(debug.Debug, &Debug{move.score, 0, move.pos, player, -1, []*Debug{}})
         }
-        board[move.Y][move.X] = EMPTY
+        if depth == 1 {
+            score = getFinalScore(move.pos, player)
+        } else {
+            if debugMode {
+                score = minimax(changePlayer(player), depth-1, debug.Debug[i]).score
+            } else {
+                score = minimax(changePlayer(player), depth-1, nil).score
+            }
+        }
+        undoMove(move.pos, player)
 
-        if (score > bestScore && player == AI) ||
-            (score < bestScore && player == HUMAN) {
-            bestScore, y, x = score, move.Y, move.X
+        bestScore = getBestScore(score, bestScore, player)
+        if debugMode {
+            debug.Debug[i].BestScore = bestScore
+        }
+        if score == bestScore {
+            pos = move.pos
+            if debugMode {
+                debug.Index = i
+            }
         }
     }
 
-    return Pos{y, x, bestScore}
+    if pos != nil && pos.Capture != nil && pos.Capture.Enemy == player {
+        pos.Capture = nil
+    }
+
+    return Move{pos, bestScore}
 }

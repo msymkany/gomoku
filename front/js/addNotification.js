@@ -1,6 +1,6 @@
 function addNotification(text) {
   const notification = document.querySelector('.notification');
-  const p = document.createElement('p');
+  const p = newElem('p');
   p.innerHTML = text;
   notification.insertBefore(p, notification.firstChild);
 }
