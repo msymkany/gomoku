@@ -1,12 +1,12 @@
-function selectCell(selectedY, selectedX) {
-
+function selectCell(selectedY, selectedX, color) {
   document.querySelector('#capture_rule').disabled = true;
+  document.querySelector('#ai_mode').disabled = true;
+  cellClick = null;
 
-  fetch(`/api?y=${selectedY}&x=${selectedX}`)
+  fetch(`/api/move?y=${selectedY}&x=${selectedX}&color=${color}`)
     .then(response => response.json())
     .then(data => {
       const {blue_pos, red_pos, win, notification} = data;
-
       document.querySelector('#blue_capture').innerHTML = data.captures[1];
       document.querySelector('#red_capture').innerHTML = data.captures[2];
 
@@ -19,14 +19,18 @@ function selectCell(selectedY, selectedX) {
         cell2.classList.toggle(className);
       };
 
-      const placePos = () => {
-        const cell = document.querySelector(`#y${red_pos.y}x${red_pos.x}`);
-        cell.classList.toggle('red');
-        if (red_pos.capture) {
-          capture(red_pos.capture.pos, 'blue');
+      const placePos = (blue_pos, red_pos) => {
+        if (AIMode) {
+          document.querySelector(`#y${red_pos.y}x${red_pos.x}`)
+            .classList.toggle('red');
+        } else if (AITips && !win && !data.win_by_capture) {
+          document.querySelector(`#y${red_pos.y}x${red_pos.x}`)
+            .classList.toggle('tip');
         }
-        if (blue_pos.capture) {
-          capture(blue_pos.capture.pos, 'red');
+        if (AIMode && red_pos.capture) {
+          capture(red_pos.capture.pos, 'blue');
+        } else if (blue_pos.capture) {
+          capture(blue_pos.capture.pos, currentMove());
         }
       };
 
@@ -35,24 +39,33 @@ function selectCell(selectedY, selectedX) {
       }
 
       if (win !== undefined && win !== null) {
-        cellClick = null;
-        showWinner(data);
         if (red_pos) {
-          placePos();
+          placePos(blue_pos, red_pos);
         }
+        showWinner(data);
       } else if (data.win_by_capture) {
-        cellClick = null;
-        showWinner(data);
         if (red_pos) {
-          placePos()
+          placePos(blue_pos, red_pos)
         } else {
-          capture(blue_pos.capture.pos, 'red');
+          capture(blue_pos.capture.pos, currentMove());
         }
+        showWinner(data);
       } else if (!red_pos) {
-        const cell = document.querySelector(`#y${selectedY}x${selectedX}`);
-        cell.classList.toggle('blue');
+        document.querySelector(`#y${selectedY}x${selectedX}`)
+          .classList.toggle(color);
+        if (!AIMode) {
+          currentMove({'red': 'blue', 'blue': 'red'}[currentMove()]);
+        }
       } else {
-        placePos();
+        placePos(blue_pos, red_pos);
+      }
+
+      if (AIMode) {
+        currentMove({'red': 'blue', 'blue': 'red'}[currentMove()]);
+      }
+
+      if (!win && !data.win_by_capture) {
+        cellClick = selectCell;
       }
 
     })

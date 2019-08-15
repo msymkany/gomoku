@@ -3,14 +3,14 @@
   res = await res.json();
 
   // Set Sidebar
-  const doubleThreeInput = document.querySelector('#double_three');
-  doubleThreeInput.checked = res.double_three;
-
-  const captureRule = document.querySelector('#capture_rule');
-  captureRule.checked = res.capture_rule;
-
-  document.querySelector('#blue_capture').innerHTML = res.captures[1];
-  document.querySelector('#red_capture').innerHTML = res.captures[2];
+  AIMode = res.ai_mode;
+  AITips = res.ai_tips;
+  const aiTips = document.querySelector('#ai_tips');
+  [aiTips.checked, aiTips.disabled] = [res.ai_tips, res.ai_mode];
+  document.querySelector('#double_three').checked = res.double_three;
+  document.querySelector('#ai_mode').checked = res.ai_mode;
+  document.querySelector('#capture_rule').checked = res.capture_rule;
+  document.querySelector('.capture-rule').style.display = res.capture_rule ? 'flex' : 'none';
 
   const depthSelector = document.querySelector('#depth');
   for (let i = 1; i <= maxDepth; i++) {
@@ -26,8 +26,16 @@
   }
   movesSelector.value = res.moves;
 
-  const debugMode = document.querySelector('#debug_mode');
-  debugMode.checked = res.debug_mode;
+  if ((document.querySelector('#difficulty_level').selectedIndex = (() => {
+    const lvl = {'101': 0, '203': 1, '1502': 2}[`${res.moves}${res.depth}`];
+    return lvl !== undefined ? lvl : 3;
+  })()) !== 3) {
+    depthSelector.parentElement.style.display = 'none';
+    movesSelector.parentElement.style.display = 'none';
+  }
+
+
+  document.querySelector('#debug_mode').checked = res.debug_mode;
   if (!res.debug_mode) {
     document.querySelector('.debug-wrapper').style.display = 'none';
   }
@@ -50,8 +58,11 @@
         if (cellClick &&
           this.classList.value.search('blue') === -1 &&
           this.classList.value.search('red') === -1) {
-          this.classList.toggle('blue');
-          cellClick(y, x)
+          document.querySelectorAll('.tip').forEach(cell => cell.classList.remove('tip'));
+          const currentColor = currentMove();
+          currentMove({'red': 'blue', 'blue': 'red'}[currentColor]);
+          this.classList.toggle(currentColor);
+          cellClick(y, x, currentColor);
         }
       };
       cell.appendChild(newElem('span'));
@@ -60,45 +71,12 @@
 
     boardDiv.appendChild(row);
   }
-
-  if (res.win || res.win_by_capture !== 0) {
-    cellClick = null;
-    showWinner(res);
-  }
 })();
 
-// document.querySelectorAll('.board').forEach(board => {
-//   const turnScore = document.createElement('div');
-//   turnScore.innerHTML = 'turnScore: 0.12345678';
-//   turnScore.className = 'score-num';
-//   board.appendChild(turnScore);
-//
-//   const bestScore = document.createElement('div');
-//   bestScore.innerHTML = 'bestScore: 0.12345678';
-//   bestScore.className = 'score-num';
-//   board.appendChild(bestScore);
-//
-//   for (let y = 0; y < boardHeight; y++) {
-//     const row = document.createElement('div');
-//     row.className = 'row';
-//
-//     for (let x = 0; x < boardWidth; x++) {
-//       const cell = document.createElement('div');
-//       const circle = document.createElement('span');
-//       cell.className = 'cell small';
-//       // cell.id = `y${y}x${x}`;
-//       // cell.onclick = function () {
-//       //   if (cellClick &&
-//       //     this.classList.value.search('blue') === -1 &&
-//       //     this.classList.value.search('red') === -1) {
-//       //     this.classList.toggle('blue');
-//       //     cellClick(y, x)
-//       //   }
-//       // };
-//       cell.appendChild(circle);
-//       row.appendChild(cell);
-//     }
-//
-//     board.appendChild(row);
-//   }
-// });
+function firstMove(color) {
+  document.querySelector('#turn-order').style.display = 'none';
+  currentMove(color);
+  if (document.querySelector('#ai_mode').checked && color === 'red') {
+    selectCell(parseInt(boardHeight / 2), parseInt(boardWidth / 2), 'red');
+  }
+}

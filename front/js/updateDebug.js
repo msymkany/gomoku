@@ -52,8 +52,8 @@ function updateDebug(debugObj) {
     debugArr.forEach((debugEl, index) => {
       const scoreButton = newElem('button', 'score-button', debugEl.best_score);
       scoreButton.onclick = function () {
-        this.parentElement.querySelector('.active').classList.toggle('active');
-        this.classList.toggle('active');
+        this.parentElement.querySelector('.active').classList.remove('active');
+        this.classList.add('active');
         (function removeSibling(el) {
           if (el) {
             removeSibling(el.nextSibling);
@@ -68,7 +68,7 @@ function updateDebug(debugObj) {
         }
       };
       if (mainIndex === index) {
-        scoreButton.classList.toggle('active');
+        scoreButton.classList.add('active');
       }
       scores.appendChild(scoreButton);
     });

@@ -8,22 +8,31 @@
 <body>
 <div class="wrapper">
     <div class="sidepanel">
-        <h1>Game</h1>
         <div>
             <h3>Notifications</h3>
             <div class="notification"></div>
         </div>
         <div>
+            <div class="setting">
+                <div>Current Move</div>
+                <div class="cell" id="current_move"><span></span></div>
+            </div>
             <button onclick="resetGame()">Reset game</button>
-            <button onclick="loadScenario1()">Scenario1</button>
-            <button onclick="loadScenario2()">Scenario2</button>
             <div class="setting">
                 <label for="double_three">Double-three rule</label>
                 <input type="checkbox" id="double_three" onchange="changeDoubleThreeRule()">
             </div>
+            <div class="setting">
+                <label for="ai_mode">AI Mode</label>
+                <input type="checkbox" id="ai_mode" onchange="changeAIMode()">
+            </div>
+            <div class="setting">
+                <label for="ai_tips">AI Tips</label>
+                <input type="checkbox" id="ai_tips" onchange="changeAITips()">
+            </div>
             <div class="difficulty">
                 <div class="setting">
-                    <label for="capture_rule">Capture</label>
+                    <label for="capture_rule">Capture mode</label>
                     <input type="checkbox" id="capture_rule" onchange="changeCaptureRule()">
                 </div>
                 <div class="setting capture-rule">
@@ -35,6 +44,12 @@
             </div>
             <div class="difficulty">
                 <h4>Difficulty</h4>
+                <select id="difficulty_level" onchange="changeDifficultyLevel()">
+                    <option>easy</option>
+                    <option selected>medium</option>
+                    <option>hard</option>
+                    <option>custom</option>
+                </select>
                 <div class="setting">
                     <label for="depth">Depth</label>
                     <select id="depth" onchange="changeDifficulty()"></select>
@@ -45,12 +60,20 @@
                 </div>
             </div>
             <div class="setting">
-                <label for="debug_mode">Debug</label>
+                <label for="debug_mode">Debug mode</label>
                 <input type="checkbox" id="debug_mode" onchange="changeDebugMode()">
             </div>
         </div>
     </div>
-    <div id="board"></div>
+    <div id="board">
+        <div id="turn-order">
+            <div>
+                <div>Blue first?</div>
+                <button onclick="firstMove('blue')">Yes</button>
+                <button onclick="firstMove('red')">No</button>
+            </div>
+        </div>
+    </div>
 </div>
 <div class="wrapper debug-wrapper">
     <h1>Debug</h1>
@@ -62,7 +85,6 @@
 <script type="text/javascript" src="js/globals.js"></script>
 <script type="text/javascript" src="js/createGame.js"></script>
 <script type="text/javascript" src="js/resetGame.js"></script>
-<script type="text/javascript" src="js/loadScenario.js"></script>
 <script type="text/javascript" src="js/changeSettings.js"></script>
 <script type="text/javascript" src="js/addNotification.js"></script>
 <script type="text/javascript" src="js/updateDebug.js"></script>

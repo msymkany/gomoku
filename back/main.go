@@ -12,11 +12,12 @@ import (
 
 func handleError(err error) {
     log.Println(err.Error())
+    log.Println("currentMove: ", currentMove)
     msg, _ := json.Marshal(err.Error())
     http.Error(writer, string(msg), 500)
 }
 
-func validatePosParams(yKey, xKey string) (int, int, bool) {
+func validatePosParams(yKey, xKey, color string) (int, int, bool) {
     if yKey == "" || xKey == "" {
         handleError(errors.New("no get params"))
         return 0, 0, false
@@ -25,7 +26,7 @@ func validatePosParams(yKey, xKey string) (int, int, bool) {
     x, errX := strconv.Atoi(xKey)
     if errY != nil || errX != nil ||
         x < 0 || y < 0 || x > 18 || y > 18 ||
-        board[y][x] != EMPTY {
+        board[y][x] != EMPTY || (color != "red" && color != "blue") {
         if errY != nil {
             handleError(errY)
         } else if errX != nil {
@@ -35,60 +36,82 @@ func validatePosParams(yKey, xKey string) (int, int, bool) {
         }
         return 0, 0, false
     }
+    if currentMove == EMPTY {
+        currentMove = map[string]int{"blue": HUMAN, "red": AI}[color]
+    } else {
+        if color == "red" && currentMove == HUMAN ||
+            color == "blue" && currentMove == AI {
+            handleError(errors.New("invalid params"))
+            return 0, 0, false
+        }
+    }
     return y, x, true
 }
 
-func api(w http.ResponseWriter, r *http.Request) {
+func checkWinMove(y, x int) string {
+    if captures[currentMove] == 10 {
+        winByCapture = currentMove
+        if currentMove == AI {
+            return "Red won"
+        } else {
+            return "Blue won"
+        }
+    }
+    if isWin, line := fiveInARow(y, x, currentMove); isWin {
+        win = line
+        if currentMove == AI {
+            return "Red won"
+        } else {
+            return "Blue won"
+        }
+    }
+    return ""
+}
+
+func apiMove(w http.ResponseWriter, r *http.Request) {
     var aiMove = Move{nil, 0}
-    var isWin = false
     var debug *Debug = nil
     if debugMode {
         debug = &Debug{0, 0, nil, 0, -1, []*Debug{}}
     }
-    var line *[]Coord
     var notification string
 
-    timerStart := time.Now().UnixNano()
     writer = w
 
-    query := r.URL.Query()
-    y, x, valid := validatePosParams(query.Get("y"), query.Get("x"))
+    get := r.URL.Query().Get
+    y, x, valid := validatePosParams(get("y"), get("x"), get("color"))
     if valid == false {
         return
     }
 
-    pos := &Position{captureMove(y, x, HUMAN), y, x}
-    if doubleThree(pos, HUMAN) {
+    timerStart := time.Now().UnixNano()
+
+    pos := &Position{captureMove(y, x, currentMove), y, x}
+    if doubleThree(pos, currentMove) {
         notification = fmt.Sprintf("No double-three")
     } else {
-        makeMove(pos, HUMAN)
-        if captures[HUMAN] == 10 {
-            notification = "Blue won"
-            winByCapture = 1
-        } else {
-            isWin, line = fiveInARow(y, x, HUMAN)
-            if isWin == false {
+        if currentMove == HUMAN && AIMode {
+            makeMove(pos, HUMAN)
+            if notification = checkWinMove(y, x); notification == "" {
                 aiMove = minimax(AI, Depth, debug)
+                currentMove = AI
                 makeMove(aiMove.pos, AI)
-                if doubleThreeRule {
-                    resetFreeThrees()
-                }
-                if captures[AI] == 10 {
-                    notification = "Red won"
-                    winByCapture = 2
-                } else {
-                    isWin, line = fiveInARow(aiMove.pos.Y, aiMove.pos.X, AI)
-                    if isWin == true {
-                        notification = "Red won"
-                    }
-                }
+                notification = checkWinMove(aiMove.pos.Y, aiMove.pos.X)
+                currentMove = HUMAN
+            }
+        } else {
+            makeMove(pos, currentMove)
+            if notification = checkWinMove(y, x); notification == "" {
+                currentMove = changePlayer(currentMove)
+            }
+            if AITips && AIMode == false {
+                aiMove = minimax(currentMove, Depth, debug)
             } else {
-                notification = "Blue won"
+                aiMove.pos = pos
             }
         }
-
-        if isWin == true {
-            win = line
+        if doubleThreeRule {
+            resetFreeThrees()
         }
 
         timerEnd := time.Now().UnixNano()
@@ -116,45 +139,43 @@ func api(w http.ResponseWriter, r *http.Request) {
     fmt.Fprintln(w, string(data))
 }
 
+func resetGame() {
+    board = [BoardHeight][BoardWidth]int{}
+    win = nil
+    winByCapture = 0
+    currentMove = EMPTY
+    freeThreeAI = false
+    freeThreeHuman = false
+    captures[AI] = 0
+    captures[HUMAN] = 0
+}
+
 func apiBoard(w http.ResponseWriter, r *http.Request) {
+    resetGame()
     data, _ := json.Marshal(struct {
-        Board        *[BoardHeight][BoardWidth]int `json:"board"`
-        Win          *[]Coord                      `json:"win"`
-        WinByCapture int                           `json:"win_by_capture"`
-        Depth        int                           `json:"depth"`
-        Moves        int                           `json:"moves"`
-        DoubleThree  bool                          `json:"double_three"`
-        CaptureRule  bool                          `json:"capture_rule"`
-        Captures     map[int]int                   `json:"captures"`
-        DebugMode    bool                          `json:"debug_mode"`
+        Board       *[BoardHeight][BoardWidth]int `json:"board"`
+        Depth       int                           `json:"depth"`
+        Moves       int                           `json:"moves"`
+        DoubleThree bool                          `json:"double_three"`
+        CaptureRule bool                          `json:"capture_rule"`
+        DebugMode   bool                          `json:"debug_mode"`
+        AIMode      bool                          `json:"ai_mode"`
+        AITips      bool                          `json:"ai_tips"`
     }{
         &board,
-        win,
-        winByCapture,
         Depth,
         MovesCheck,
         doubleThreeRule,
         captureRule,
-        captures,
         debugMode,
+        AIMode,
+        AITips,
     })
     fmt.Fprintln(w, string(data))
 }
 
 func apiReset(w http.ResponseWriter, r *http.Request) {
-    board = [BoardHeight][BoardWidth]int{}
-    board[BoardHeight/2][BoardWidth/2] = AI
-    win = nil
-    winByCapture = 0
-
-    if doubleThreeRule {
-        freeThreeAI = false
-        freeThreeHuman = false
-    }
-
-    captures[AI] = 0
-    captures[HUMAN] = 0
-
+    resetGame()
     data, _ := json.Marshal(board)
     fmt.Fprintln(w, string(data))
 }
@@ -186,8 +207,7 @@ func apiDifficulty(w http.ResponseWriter, r *http.Request) {
 
     depth := r.URL.Query().Get("depth")
     moves := r.URL.Query().Get("moves")
-    newDepth, newMoves, valid := validateDifficultyParams(depth, moves)
-    if valid {
+    if newDepth, newMoves, valid := validateDifficultyParams(depth, moves); valid {
         Depth = newDepth
         MovesCheck = newMoves
     }
@@ -196,14 +216,9 @@ func apiDifficulty(w http.ResponseWriter, r *http.Request) {
 func changeSetting(w http.ResponseWriter, r *http.Request, boolVar *bool) {
     writer = w
 
-    check := r.URL.Query().Get("check")
-
-    if check != "" && (check == "true" || check == "false") {
-        if check == "true" {
-            *boolVar = true
-        } else {
-            *boolVar = false
-        }
+    if check := r.URL.Query().Get("check");
+        check != "" && (check == "true" || check == "false") {
+        *boolVar = map[string]bool{"true": true, "false": false}[check]
     } else if check == "" {
         handleError(errors.New("no get params"))
     } else {
@@ -211,83 +226,23 @@ func changeSetting(w http.ResponseWriter, r *http.Request, boolVar *bool) {
     }
 }
 
-func apiDoubleThree(w http.ResponseWriter, r *http.Request) {
-    changeSetting(w, r, &doubleThreeRule)
-}
-
-func apiCapture(w http.ResponseWriter, r *http.Request) {
-    changeSetting(w, r, &captureRule)
-}
-
-func apiDebug(w http.ResponseWriter, r *http.Request) {
-    changeSetting(w, r, &debugMode)
-}
-
-func scenario1(w http.ResponseWriter, r *http.Request) {
-    board = [BoardHeight][BoardWidth]int{
-        {0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0},
-        {0, 0, 0, 0, 2, 0, 0, 1, 1, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0},
-        {0, 0, 0, 0, 1, 1, 0, 2, 2, 2, 1, 0, 0, 0, 0, 0, 0, 0, 0},
-        {0, 0, 1, 1, 2, 2, 1, 2, 1, 2, 2, 0, 0, 0, 1, 0, 0, 0, 0},
-        {0, 1, 2, 2, 2, 1, 2, 1, 1, 2, 2, 1, 2, 2, 2, 0, 0, 0, 0},
-        {0, 0, 2, 1, 0, 1, 2, 1, 1, 1, 2, 2, 1, 2, 2, 1, 2, 2, 0},
-        {0, 1, 2, 2, 1, 2, 1, 0, 2, 2, 1, 1, 1, 1, 2, 0, 1, 0, 0},
-        {2, 0, 1, 2, 2, 2, 1, 1, 1, 2, 2, 1, 1, 1, 2, 1, 0, 0, 0},
-        {2, 0, 1, 2, 1, 2, 2, 2, 2, 1, 1, 2, 2, 1, 1, 2, 1, 0, 0},
-        {2, 1, 1, 1, 1, 2, 1, 2, 2, 2, 2, 1, 1, 1, 1, 2, 2, 0, 0},
-        {0, 0, 1, 1, 2, 1, 1, 0, 1, 2, 2, 1, 2, 2, 2, 2, 1, 1, 0},
-        {0, 1, 2, 1, 2, 2, 1, 1, 2, 1, 1, 1, 1, 2, 1, 2, 2, 0, 0},
-        {2, 0, 1, 1, 1, 2, 2, 1, 1, 2, 2, 2, 1, 2, 1, 1, 2, 1, 1},
-        {0, 0, 0, 2, 0, 2, 1, 1, 2, 2, 1, 0, 2, 1, 0, 0, 1, 2, 0},
-        {0, 0, 0, 2, 2, 1, 1, 2, 1, 0, 2, 1, 0, 2, 1, 0, 2, 2, 1},
-        {0, 0, 0, 2, 1, 2, 1, 2, 0, 0, 0, 0, 1, 2, 2, 2, 2, 1, 0},
-        {0, 0, 1, 2, 1, 2, 2, 2, 2, 1, 0, 1, 2, 2, 1, 1, 2, 0, 0},
-        {0, 0, 0, 1, 0, 2, 0, 1, 0, 0, 0, 2, 2, 1, 0, 0, 1, 0, 0},
-        {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0},
-    }
-    win = nil
-    data, _ := json.Marshal(board)
-    fmt.Fprintln(w, string(data))
-}
-
-func scenario2(w http.ResponseWriter, r *http.Request) {
-    board = [BoardHeight][BoardWidth]int{
-        {1, 0, 1, 2, 2, 1, 0, 1, 2, 1, 1, 2, 2, 1, 2, 1, 1, 1, 2},
-        {2, 1, 2, 1, 2, 2, 1, 1, 1, 2, 2, 2, 1, 2, 2, 1, 2, 1, 2},
-        {0, 2, 2, 2, 1, 1, 1, 2, 2, 2, 1, 1, 2, 1, 1, 2, 2, 2, 1},
-        {1, 2, 1, 1, 2, 2, 1, 2, 1, 2, 2, 1, 2, 1, 1, 2, 1, 2, 0},
-        {2, 1, 2, 2, 2, 1, 2, 1, 1, 2, 2, 1, 2, 2, 2, 1, 0, 1, 1},
-        {1, 1, 2, 1, 0, 1, 2, 1, 1, 1, 2, 2, 1, 2, 2, 1, 2, 2, 1},
-        {1, 1, 2, 2, 1, 2, 1, 1, 2, 2, 1, 1, 1, 1, 2, 2, 1, 2, 2},
-        {2, 2, 1, 2, 2, 2, 1, 1, 1, 2, 2, 1, 1, 1, 2, 1, 1, 1, 1},
-        {2, 1, 1, 2, 1, 2, 2, 2, 2, 1, 1, 2, 2, 1, 1, 2, 1, 2, 1},
-        {2, 1, 1, 1, 1, 2, 1, 2, 2, 2, 2, 1, 1, 1, 1, 2, 2, 2, 1},
-        {0, 1, 1, 1, 2, 1, 1, 0, 1, 2, 2, 1, 2, 2, 2, 2, 1, 1, 2},
-        {1, 1, 2, 1, 2, 2, 1, 1, 2, 1, 1, 1, 1, 2, 1, 2, 2, 1, 1},
-        {2, 2, 1, 1, 1, 2, 2, 1, 1, 2, 2, 2, 1, 2, 1, 1, 2, 1, 1},
-        {2, 2, 2, 2, 1, 2, 1, 1, 2, 2, 1, 0, 2, 1, 0, 2, 1, 2, 2},
-        {2, 1, 1, 2, 2, 1, 1, 2, 1, 2, 2, 1, 2, 2, 1, 1, 2, 2, 1},
-        {2, 1, 2, 2, 1, 2, 1, 2, 1, 2, 1, 1, 1, 2, 2, 2, 2, 1, 1},
-        {1, 1, 1, 2, 1, 2, 2, 2, 2, 1, 2, 1, 2, 2, 1, 1, 2, 2, 0},
-        {2, 2, 2, 1, 0, 2, 2, 1, 2, 2, 1, 2, 2, 1, 2, 0, 1, 1, 1},
-        {2, 1, 1, 2, 1, 1, 1, 2, 1, 2, 1, 1, 1, 2, 1, 2, 2, 0, 2},
-    }
-    win = nil
-    data, _ := json.Marshal(board)
-    fmt.Fprintln(w, string(data))
-}
-
 func main() {
-    board[BoardHeight/2][BoardWidth/2] = AI
     http.Handle("/", http.FileServer(http.Dir("front")))
-    http.HandleFunc("/api", api)
+    http.HandleFunc("/api/move", apiMove)
     http.HandleFunc("/api/board", apiBoard)
     http.HandleFunc("/api/reset", apiReset)
     http.HandleFunc("/api/settings/difficulty", apiDifficulty)
-    http.HandleFunc("/api/settings/double_three", apiDoubleThree)
-    http.HandleFunc("/api/settings/capture", apiCapture)
-    http.HandleFunc("/api/settings/debug", apiDebug)
-    http.HandleFunc("/api/scenario1", scenario1)
-    http.HandleFunc("/api/scenario2", scenario2)
+
+    http.HandleFunc("/api/settings/double-three",
+        func(w http.ResponseWriter, r *http.Request) { changeSetting(w, r, &doubleThreeRule) })
+    http.HandleFunc("/api/settings/ai-mode",
+        func(w http.ResponseWriter, r *http.Request) { changeSetting(w, r, &AIMode) })
+    http.HandleFunc("/api/settings/ai-tips",
+        func(w http.ResponseWriter, r *http.Request) { changeSetting(w, r, &AITips) })
+    http.HandleFunc("/api/settings/capture",
+        func(w http.ResponseWriter, r *http.Request) { changeSetting(w, r, &captureRule) })
+    http.HandleFunc("/api/settings/debug",
+        func(w http.ResponseWriter, r *http.Request) { changeSetting(w, r, &debugMode) })
+
     log.Fatal(http.ListenAndServe(":8080", nil))
 }

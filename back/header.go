@@ -60,11 +60,15 @@ var captures = map[int]int{
 
 var debugMode = true
 
+var currentMove = EMPTY
+var AIMode = true
+var AITips = true
+
 const maxDepth = 4
 const maxMovesCheck = 150
 
-var Depth = 2
-var MovesCheck = 20
+var Depth = 3
+var MovesCheck = 10
 
 var board = [BoardHeight][BoardWidth]int{}
 var win *[]Coord = nil
