@@ -47,5 +47,5 @@ func getCaptureScore(player int) float64 {
     } else if captures[player] == 0 {
         return 5
     }
-    return 20000000
+    return 200000000
 }

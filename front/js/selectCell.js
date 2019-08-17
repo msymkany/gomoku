@@ -29,7 +29,8 @@ function selectCell(selectedY, selectedX, color) {
         }
         if (AIMode && red_pos.capture) {
           capture(red_pos.capture.pos, 'blue');
-        } else if (blue_pos.capture) {
+        }
+        if (blue_pos.capture) {
           capture(blue_pos.capture.pos, currentMove());
         }
       };

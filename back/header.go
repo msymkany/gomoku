@@ -68,7 +68,7 @@ const maxDepth = 4
 const maxMovesCheck = 150
 
 var Depth = 3
-var MovesCheck = 10
+var MovesCheck = 20
 
 var board = [BoardHeight][BoardWidth]int{}
 var win *[]Coord = nil
