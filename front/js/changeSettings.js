@@ -42,9 +42,9 @@ function changeDifficultyLevel() {
     depth.parentElement.style.display = 'none';
     moves.parentElement.style.display = 'none';
     [depth.selectedIndex, moves.selectedIndex] = {
-      'easy': [0, 9],
-      'medium': [2, 19],
-      'hard': [1, 149],
+      'easy': [12, 1],
+      'medium': [5, 6],
+      'hard': [2, 249],
     }[level];
     changeDifficulty();
   }

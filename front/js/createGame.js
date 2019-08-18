@@ -27,7 +27,7 @@
   movesSelector.value = res.moves;
 
   if ((document.querySelector('#difficulty_level').selectedIndex = (() => {
-    const lvl = {'101': 0, '203': 1, '1502': 2}[`${res.moves}${res.depth}`];
+    const lvl = {'213': 0, '76': 1, '2503': 2}[`${res.moves}${res.depth}`];
     return lvl !== undefined ? lvl : 3;
   })()) !== 3) {
     depthSelector.parentElement.style.display = 'none';

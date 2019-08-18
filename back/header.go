@@ -34,12 +34,12 @@ type Position struct {
 
 type Move struct {
     pos   *Position
-    score float64
+    score int
 }
 
 type Debug struct {
-    TurnScore float64   `json:"turn_score"`
-    BestScore float64   `json:"best_score"`
+    TurnScore int       `json:"turn_score"`
+    BestScore int       `json:"best_score"`
     Pos       *Position `json:"pos"`
     Player    int       `json:"player"`
     Index     int       `json:"index"`
@@ -64,11 +64,11 @@ var currentMove = EMPTY
 var AIMode = true
 var AITips = true
 
-const maxDepth = 10
-const maxMovesCheck = 150
+const maxDepth = 15
+const maxMovesCheck = 250
 
-var Depth = 3
-var MovesCheck = 20
+var Depth = 13
+var MovesCheck = 2
 
 var board = [BoardHeight][BoardWidth]int{}
 var win *[]Coord = nil

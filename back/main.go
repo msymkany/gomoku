@@ -37,7 +37,11 @@ func validatePosParams(yKey, xKey, color string) (int, int, bool) {
         return 0, 0, false
     }
     if currentMove == EMPTY {
-        currentMove = map[string]int{"blue": HUMAN, "red": AI}[color]
+        if color == "blue" {
+            currentMove = HUMAN
+        } else {
+            currentMove = AI
+        }
     } else {
         if color == "red" && currentMove == HUMAN ||
             color == "blue" && currentMove == AI {
@@ -91,21 +95,36 @@ func apiMove(w http.ResponseWriter, r *http.Request) {
         notification = fmt.Sprintf("No double-three")
     } else {
         if currentMove == HUMAN && AIMode {
-            makeMove(pos, HUMAN)
+            board[pos.Y][pos.X] = HUMAN
+            if pos.Capture != nil {
+                board[pos.Capture.Pos[0].Y][pos.Capture.Pos[0].X] = EMPTY
+                board[pos.Capture.Pos[1].Y][pos.Capture.Pos[1].X] = EMPTY
+                captures[HUMAN] += 2
+            }
             if notification = checkWinMove(y, x); notification == "" {
-                aiMove = minimax(AI, Depth, debug, -1000000000, 1000000000)
+                aiMove = minimax(AI, Depth, debug, -10000000000, 10000000000)
                 currentMove = AI
-                makeMove(aiMove.pos, AI)
+                board[aiMove.pos.Y][aiMove.pos.X] = AI
+                if aiMove.pos.Capture != nil {
+                    board[aiMove.pos.Capture.Pos[0].Y][aiMove.pos.Capture.Pos[0].X] = EMPTY
+                    board[aiMove.pos.Capture.Pos[1].Y][aiMove.pos.Capture.Pos[1].X] = EMPTY
+                    captures[AI] += 2
+                }
                 notification = checkWinMove(aiMove.pos.Y, aiMove.pos.X)
                 currentMove = HUMAN
             }
         } else {
-            makeMove(pos, currentMove)
+            board[pos.Y][pos.X] = currentMove
+            if pos.Capture != nil {
+                board[pos.Capture.Pos[0].Y][pos.Capture.Pos[0].X] = EMPTY
+                board[pos.Capture.Pos[1].Y][pos.Capture.Pos[1].X] = EMPTY
+                captures[currentMove] += 2
+            }
             if notification = checkWinMove(y, x); notification == "" {
                 currentMove = changePlayer(currentMove)
             }
             if AITips && AIMode == false {
-                aiMove = minimax(currentMove, Depth, debug, -1000000000, 1000000000)
+                aiMove = minimax(currentMove, Depth, debug, -10000000000, 10000000000)
             } else {
                 aiMove.pos = pos
             }
