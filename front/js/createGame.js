@@ -48,11 +48,6 @@
 
     for (let x = 0; x < boardWidth; x++) {
       const cell = newElem('div', 'cell');
-      if (res.board[y][x] === 1) {
-        cell.classList.toggle('blue');
-      } else if (res.board[y][x] === 2) {
-        cell.classList.toggle('red');
-      }
       cell.id = `y${y}x${x}`;
       cell.onclick = function () {
         if (cellClick &&

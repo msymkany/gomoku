@@ -64,7 +64,7 @@ var currentMove = EMPTY
 var AIMode = true
 var AITips = true
 
-const maxDepth = 4
+const maxDepth = 10
 const maxMovesCheck = 150
 
 var Depth = 3

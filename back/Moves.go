@@ -7,8 +7,8 @@ func (moves Moves) Len() int {
     return len(moves)
 }
 
-func (moves Moves) Less(i, j int) bool {
-    return moves[i].score > moves[j].score
+func (moves *Moves) Less(i, j int) bool {
+    return (*moves)[i].score > (*moves)[j].score
 }
 
 func (moves Moves) Swap(i, j int) {

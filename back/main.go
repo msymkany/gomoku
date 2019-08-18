@@ -93,7 +93,7 @@ func apiMove(w http.ResponseWriter, r *http.Request) {
         if currentMove == HUMAN && AIMode {
             makeMove(pos, HUMAN)
             if notification = checkWinMove(y, x); notification == "" {
-                aiMove = minimax(AI, Depth, debug)
+                aiMove = minimax(AI, Depth, debug, -1000000000, 1000000000)
                 currentMove = AI
                 makeMove(aiMove.pos, AI)
                 notification = checkWinMove(aiMove.pos.Y, aiMove.pos.X)
@@ -105,7 +105,7 @@ func apiMove(w http.ResponseWriter, r *http.Request) {
                 currentMove = changePlayer(currentMove)
             }
             if AITips && AIMode == false {
-                aiMove = minimax(currentMove, Depth, debug)
+                aiMove = minimax(currentMove, Depth, debug, -1000000000, 1000000000)
             } else {
                 aiMove.pos = pos
             }
@@ -153,16 +153,14 @@ func resetGame() {
 func apiBoard(w http.ResponseWriter, r *http.Request) {
     resetGame()
     data, _ := json.Marshal(struct {
-        Board       *[BoardHeight][BoardWidth]int `json:"board"`
-        Depth       int                           `json:"depth"`
-        Moves       int                           `json:"moves"`
-        DoubleThree bool                          `json:"double_three"`
-        CaptureRule bool                          `json:"capture_rule"`
-        DebugMode   bool                          `json:"debug_mode"`
-        AIMode      bool                          `json:"ai_mode"`
-        AITips      bool                          `json:"ai_tips"`
+        Depth       int  `json:"depth"`
+        Moves       int  `json:"moves"`
+        DoubleThree bool `json:"double_three"`
+        CaptureRule bool `json:"capture_rule"`
+        DebugMode   bool `json:"debug_mode"`
+        AIMode      bool `json:"ai_mode"`
+        AITips      bool `json:"ai_tips"`
     }{
-        &board,
         Depth,
         MovesCheck,
         doubleThreeRule,

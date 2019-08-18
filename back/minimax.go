@@ -1,110 +1,92 @@
 package main
 
-import (
-    "container/heap"
-)
-
-func validX(x int) bool {
-    if x >= 0 && x < BoardWidth {
-        return true
-    }
-    return false
-}
-
-func validY(y int) bool {
-    if y >= 0 && y < BoardHeight {
-        return true
-    }
-    return false
-}
+import "container/heap"
 
 func fiveInARow(y, x, player int) (bool, *[]Coord) {
     inARow := 0
-    var line []Coord
+    line := [9]Coord{{0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}}
+    var tempX, tempY int
 
     // Horizontal
-    for tempX := x - 4; tempX <= x+4 && tempX < BoardWidth; tempX++ {
-        if inARow >= 5 && validX(tempX) && board[y][tempX] != player {
+    for tempX = x - 4; tempX <= x+4 && tempX < BoardWidth; tempX++ {
+        if inARow >= 5 && tempX >= 0 && tempX < BoardWidth && board[y][tempX] != player {
             break
         }
-        if validX(tempX) && board[y][tempX] == player {
+        if tempX >= 0 && tempX < BoardWidth && board[y][tempX] == player {
+            line[inARow].Y, line[inARow].X = y, tempX
             inARow++
-            line = append(line, Coord{y, tempX})
         } else {
             inARow = 0
-            line = []Coord{}
         }
     }
-    if inARow >= 5 {
-        return true, &line
-    } else {
+    if inARow < 5 {
         inARow = 0
-        line = []Coord{}
+    } else {
+        winLine := line[:inARow]
+        return true, &winLine
     }
 
     // Vertical
-    for tempY := y - 4; tempY <= y+4 && tempY < BoardHeight; tempY++ {
-        if inARow >= 5 && validY(tempY) && board[tempY][x] != player {
+    for tempY = y - 4; tempY <= y+4 && tempY < BoardHeight; tempY++ {
+        if inARow >= 5 && tempY >= 0 && tempY < BoardHeight && board[tempY][x] != player {
             break
         }
-        if validY(tempY) && board[tempY][x] == player {
+        if tempY >= 0 && tempY < BoardHeight && board[tempY][x] == player {
+            line[inARow].Y, line[inARow].X = tempY, x
             inARow++
-            line = append(line, Coord{tempY, x})
         } else {
             inARow = 0
-            line = []Coord{}
         }
     }
-    if inARow >= 5 {
-        return true, &line
-    } else {
+    if inARow < 5 {
         inARow = 0
-        line = []Coord{}
+    } else {
+        winLine := line[:inARow]
+        return true, &winLine
     }
 
     // Diagonal 1
-    for tempY, tempX := y-4, x-4; tempX <= x+4 && tempY < BoardHeight && tempX < BoardWidth; tempY, tempX = tempY+1, tempX+1 {
-        if inARow >= 5 && validY(tempY) && validX(tempX) &&
+    for tempY, tempX = y-4, x-4; tempX <= x+4 && tempY < BoardHeight && tempX < BoardWidth; tempY, tempX = tempY+1, tempX+1 {
+        if inARow >= 5 && tempY >= 0 && tempY < BoardHeight && tempX >= 0 && tempX < BoardWidth &&
             board[tempY][tempX] != player {
             break
         }
-        if validY(tempY) && validX(tempX) && board[tempY][tempX] == player {
+        if tempY >= 0 && tempY < BoardHeight && tempX >= 0 && tempX < BoardWidth && board[tempY][tempX] == player {
+            line[inARow].Y, line[inARow].X = tempY, tempX
             inARow++
-            line = append(line, Coord{tempY, tempX})
         } else {
             inARow = 0
-            line = []Coord{}
         }
     }
-    if inARow >= 5 {
-        return true, &line
-    } else {
+    if inARow < 5 {
         inARow = 0
-        line = []Coord{}
+    } else {
+        winLine := line[:inARow]
+        return true, &winLine
     }
 
     // Diagonal 2
-    for tempY, tempX := y+4, x-4; tempX <= x+4 && tempY >= 0 && tempX < BoardWidth; tempY, tempX = tempY-1, tempX+1 {
-        if inARow >= 5 && validY(tempY) && validX(tempX) &&
+    for tempY, tempX = y+4, x-4; tempX <= x+4 && tempY >= 0 && tempX < BoardWidth; tempY, tempX = tempY-1, tempX+1 {
+        if inARow >= 5 && tempY >= 0 && tempY < BoardHeight && tempX >= 0 && tempX < BoardWidth &&
             board[tempY][tempX] != player {
             break
         }
-        if validY(tempY) && validX(tempX) && board[tempY][tempX] == player {
+        if tempY >= 0 && tempY < BoardHeight && tempX >= 0 && tempX < BoardWidth && board[tempY][tempX] == player {
+            line[inARow].Y, line[inARow].X = tempY, tempX
             inARow++
-            line = append(line, Coord{tempY, tempX})
         } else {
             inARow = 0
-            line = []Coord{}
         }
     }
-    if inARow >= 5 {
-        return true, &line
-    } else {
+    if inARow < 5 {
         inARow = 0
-        line = []Coord{}
+    } else {
+        winLine := line[:inARow]
+        return true, &winLine
     }
+    winLine := line[:inARow]
 
-    return false, &line
+    return false, &winLine
 }
 
 func adjacentNotEmpty(y, x int) bool {
@@ -165,33 +147,6 @@ func getScore(row, openEnds, player int) float64 {
     return 200000000
 }
 
-func checkPlayer(score *float64, row, openEnds *int, y, x, player1, curPlayer int) {
-    if board[y][x] == player1 {
-        *row = *row + 1
-    } else if board[y][x] == EMPTY && *row > 0 {
-        *openEnds = *openEnds + 1
-        *score = *score + getScore(*row, *openEnds, curPlayer)
-        *row = 0
-        *openEnds = 1
-    } else if board[y][x] == EMPTY {
-        *openEnds = 1
-    } else if *row > 0 {
-        *score = *score + getScore(*row, *openEnds, curPlayer)
-        *row = 0
-        *openEnds = 0
-    } else {
-        *openEnds = 0
-    }
-}
-
-func checkScore(score *float64, row, openEnds *int, player int) {
-    if *row > 0 {
-        *score = *score + getScore(*row, *openEnds, player)
-    }
-    *row = 0
-    *openEnds = 0
-}
-
 func currentPlayer(player1, player2 int) int {
     if player1 == player2 {
         return AI
@@ -200,55 +155,170 @@ func currentPlayer(player1, player2 int) int {
 }
 
 func getScoreFor(player1, player2, startX, endX, startY, endY int) float64 {
+    var x, y, tempX, tempY int
     score := 0.0
     row, openEnds := 0, 0
 
     // Horizontal
-    for y := startY; y < endY; y++ {
-        for x := startX; x < endX; x++ {
-            checkPlayer(&score, &row, &openEnds, y, x, player1, currentPlayer(player1, player2))
+    for y = startY; y < endY; y++ {
+        for x = startX; x < endX; x++ {
+            if board[y][x] == player1 {
+                row = row + 1
+            } else if board[y][x] == EMPTY && row > 0 {
+                openEnds = openEnds + 1
+                score = score + getScore(row, openEnds, currentPlayer(player1, player2))
+                row = 0
+                openEnds = 1
+            } else if board[y][x] == EMPTY {
+                openEnds = 1
+            } else if row > 0 {
+                score = score + getScore(row, openEnds, currentPlayer(player1, player2))
+                row = 0
+                openEnds = 0
+            } else {
+                openEnds = 0
+            }
         }
-        checkScore(&score, &row, &openEnds, currentPlayer(player1, player2))
+        if row > 0 {
+            score = score + getScore(row, openEnds, currentPlayer(player1, player2))
+        }
+        row = 0
+        openEnds = 0
     }
 
     // Vertical
-    for x := startX; x < endX; x++ {
-        for y := startY; y < endY; y++ {
-            checkPlayer(&score, &row, &openEnds, y, x, player1, currentPlayer(player1, player2))
+    for x = startX; x < endX; x++ {
+        for y = startY; y < endY; y++ {
+            if board[y][x] == player1 {
+                row = row + 1
+            } else if board[y][x] == EMPTY && row > 0 {
+                openEnds = openEnds + 1
+                score = score + getScore(row, openEnds, currentPlayer(player1, player2))
+                row = 0
+                openEnds = 1
+            } else if board[y][x] == EMPTY {
+                openEnds = 1
+            } else if row > 0 {
+                score = score + getScore(row, openEnds, currentPlayer(player1, player2))
+                row = 0
+                openEnds = 0
+            } else {
+                openEnds = 0
+            }
         }
-        checkScore(&score, &row, &openEnds, currentPlayer(player1, player2))
+        if row > 0 {
+            score = score + getScore(row, openEnds, currentPlayer(player1, player2))
+        }
+        row = 0
+        openEnds = 0
     }
 
     // Diagonal 1.1
-    for tempX := startX; tempX < endX; tempX++ {
-        for y, x := startY, tempX; y < endY && x < endX; y, x = y+1, x+1 {
-            checkPlayer(&score, &row, &openEnds, y, x, player1, currentPlayer(player1, player2))
+    for tempX = startX; tempX < endX; tempX++ {
+        for y, x = startY, tempX; y < endY && x < endX; y, x = y+1, x+1 {
+            if board[y][x] == player1 {
+                row = row + 1
+            } else if board[y][x] == EMPTY && row > 0 {
+                openEnds = openEnds + 1
+                score = score + getScore(row, openEnds, currentPlayer(player1, player2))
+                row = 0
+                openEnds = 1
+            } else if board[y][x] == EMPTY {
+                openEnds = 1
+            } else if row > 0 {
+                score = score + getScore(row, openEnds, currentPlayer(player1, player2))
+                row = 0
+                openEnds = 0
+            } else {
+                openEnds = 0
+            }
         }
-        checkScore(&score, &row, &openEnds, currentPlayer(player1, player2))
+        if row > 0 {
+            score = score + getScore(row, openEnds, currentPlayer(player1, player2))
+        }
+        row = 0
+        openEnds = 0
     }
 
     // Diagonal 1.2
-    for tempY := startY + 1; tempY < endY; tempY++ {
-        for y, x := tempY, startX; y < endY && x < endX; y, x = y+1, x+1 {
-            checkPlayer(&score, &row, &openEnds, y, x, player1, currentPlayer(player1, player2))
+    for tempY = startY + 1; tempY < endY; tempY++ {
+        for y, x = tempY, startX; y < endY && x < endX; y, x = y+1, x+1 {
+            if board[y][x] == player1 {
+                row = row + 1
+            } else if board[y][x] == EMPTY && row > 0 {
+                openEnds = openEnds + 1
+                score = score + getScore(row, openEnds, currentPlayer(player1, player2))
+                row = 0
+                openEnds = 1
+            } else if board[y][x] == EMPTY {
+                openEnds = 1
+            } else if row > 0 {
+                score = score + getScore(row, openEnds, currentPlayer(player1, player2))
+                row = 0
+                openEnds = 0
+            } else {
+                openEnds = 0
+            }
         }
-        checkScore(&score, &row, &openEnds, currentPlayer(player1, player2))
+        if row > 0 {
+            score = score + getScore(row, openEnds, currentPlayer(player1, player2))
+        }
+        row = 0
+        openEnds = 0
     }
 
     // Diagonal 2.1
-    for tempX := startX; tempX < endX; tempX++ {
-        for y, x := startY, tempX; y < endY && x >= startX; y, x = y+1, x-1 {
-            checkPlayer(&score, &row, &openEnds, y, x, player1, currentPlayer(player1, player2))
+    for tempX = startX; tempX < endX; tempX++ {
+        for y, x = startY, tempX; y < endY && x >= startX; y, x = y+1, x-1 {
+            if board[y][x] == player1 {
+                row = row + 1
+            } else if board[y][x] == EMPTY && row > 0 {
+                openEnds = openEnds + 1
+                score = score + getScore(row, openEnds, currentPlayer(player1, player2))
+                row = 0
+                openEnds = 1
+            } else if board[y][x] == EMPTY {
+                openEnds = 1
+            } else if row > 0 {
+                score = score + getScore(row, openEnds, currentPlayer(player1, player2))
+                row = 0
+                openEnds = 0
+            } else {
+                openEnds = 0
+            }
         }
-        checkScore(&score, &row, &openEnds, currentPlayer(player1, player2))
+        if row > 0 {
+            score = score + getScore(row, openEnds, currentPlayer(player1, player2))
+        }
+        row = 0
+        openEnds = 0
     }
 
     // Diagonal 2.2
-    for tempY := startY + 1; tempY < endY; tempY++ {
-        for y, x := tempY, endX-1; y < endY && x >= startX; y, x = y+1, x-1 {
-            checkPlayer(&score, &row, &openEnds, y, x, player1, currentPlayer(player1, player2))
+    for tempY = startY + 1; tempY < endY; tempY++ {
+        for y, x = tempY, endX-1; y < endY && x >= startX; y, x = y+1, x-1 {
+            if board[y][x] == player1 {
+                row = row + 1
+            } else if board[y][x] == EMPTY && row > 0 {
+                openEnds = openEnds + 1
+                score = score + getScore(row, openEnds, currentPlayer(player1, player2))
+                row = 0
+                openEnds = 1
+            } else if board[y][x] == EMPTY {
+                openEnds = 1
+            } else if row > 0 {
+                score = score + getScore(row, openEnds, currentPlayer(player1, player2))
+                row = 0
+                openEnds = 0
+            } else {
+                openEnds = 0
+            }
         }
-        checkScore(&score, &row, &openEnds, currentPlayer(player1, player2))
+        if row > 0 {
+            score = score + getScore(row, openEnds, currentPlayer(player1, player2))
+        }
+        row = 0
+        openEnds = 0
     }
 
     return score
@@ -311,20 +381,6 @@ func doubleThree(pos *Position, player int) bool {
     return double
 }
 
-func getFinalScore(pos *Position, player int) (score float64) {
-    if pos.Capture != nil {
-        score1 := getCaptureScore(AI) - getCaptureScore(HUMAN)
-        score2 := getScoreFor(AI, changePlayer(player), 0, BoardWidth, 0, BoardHeight) -
-            getScoreFor(HUMAN, changePlayer(player), 0, BoardWidth, 0, BoardHeight)
-
-        score = getBestScore(score1, score2, player)
-    } else {
-        score = getScoreFor(AI, changePlayer(player), 0, BoardWidth, 0, BoardHeight) -
-            getScoreFor(HUMAN, changePlayer(player), 0, BoardWidth, 0, BoardHeight)
-    }
-    return
-}
-
 func checkForWin(player int) *Position {
     var win bool
     var capture *Capture = nil
@@ -359,7 +415,20 @@ func checkIfThereWin(player int) (win bool, pos *Position, score float64) {
     if pos != nil {
         win = true
         makeMove(pos, player)
-        score = getFinalScore(pos, player)
+        if pos.Capture != nil {
+            score1 := getCaptureScore(AI) - getCaptureScore(HUMAN)
+            score2 := getScoreFor(AI, changePlayer(player), 0, BoardWidth, 0, BoardHeight) -
+                getScoreFor(HUMAN, changePlayer(player), 0, BoardWidth, 0, BoardHeight)
+            if (player == AI && score1 > score2) ||
+                (player == HUMAN && score1 < score2) {
+                score = score1
+            } else {
+                score = score2
+            }
+        } else {
+            score = getScoreFor(AI, changePlayer(player), 0, BoardWidth, 0, BoardHeight) -
+                getScoreFor(HUMAN, changePlayer(player), 0, BoardWidth, 0, BoardHeight)
+        }
         undoMove(pos, player)
     }
 
@@ -368,25 +437,36 @@ func checkIfThereWin(player int) (win bool, pos *Position, score float64) {
 
 func generateMoves(player int) Moves {
     var moves Moves
+    var score1, score2 float64
+    //var score float64
     heap.Init(&moves)
 
-    win, pos, score := checkIfThereWin(player)
-    if win {
+    if win, pos, score := checkIfThereWin(player); win {
         return Moves{{pos, score}}
     }
 
     for y := 0; y < BoardHeight; y++ {
         for x := 0; x < BoardWidth; x++ {
             if board[y][x] == EMPTY && adjacentNotEmpty(y, x) {
-                pos = &Position{captureMove(y, x, player), y, x}
+                pos := &Position{captureMove(y, x, player), y, x}
                 if doubleThree(pos, player) == false {
-                    score1 := calculateScoreFor(pos, player)
-                    score2 := calculateScoreFor(pos, changePlayer(player))
+                    score1 = calculateScoreFor(pos, player)
+                    score2 = calculateScoreFor(&Position{captureMove(y, x, changePlayer(player)), y, x}, changePlayer(player))
                     if score1 < score2 {
                         heap.Push(&moves, Move{pos, score1})
                     } else {
                         heap.Push(&moves, Move{pos, score2})
                     }
+                    //            if pos.Capture != nil {
+                    //                score = getBestScore(getCaptureScore(AI)-getCaptureScore(HUMAN),
+                    //                    getScoreFor(AI, changePlayer(player), 0, BoardWidth, 0, BoardHeight)-
+                    //                        getScoreFor(HUMAN, changePlayer(player), 0, BoardWidth, 0, BoardHeight), player)
+                    //            } else {
+                    //                score = getScoreFor(AI, changePlayer(player), 0, BoardWidth, 0, BoardHeight) -
+                    //                    getScoreFor(HUMAN, changePlayer(player), 0, BoardWidth, 0, BoardHeight)
+                    //            }
+                    //heap.Push(&moves, Move{pos, score})
+
                 }
             }
         }
@@ -410,14 +490,6 @@ func changePlayer(player int) int {
     return AI
 }
 
-func getBestScore(score1, score2 float64, player int) float64 {
-    if (player == AI && score1 > score2) ||
-        (player == HUMAN && score1 < score2) {
-        return score1
-    }
-    return score2
-}
-
 func makeMove(pos *Position, player int) {
     board[pos.Y][pos.X] = player
     if pos.Capture != nil {
@@ -436,9 +508,10 @@ func undoMove(pos *Position, player int) {
     board[pos.Y][pos.X] = EMPTY
 }
 
-func minimax(player, depth int, debug *Debug) Move {
+func minimax(player, depth int, debug *Debug, alpha, beta float64) Move {
     var bestScore float64
     var pos *Position = nil
+    var move Move
     score := 0.0
 
     if player == AI {
@@ -451,32 +524,57 @@ func minimax(player, depth int, debug *Debug) Move {
 
     movesLen := possibleMoves.Len()
     for i := 0; movesLen > 0 && i < MovesCheck; movesLen, i = movesLen-1, i+1 {
-        move := heap.Pop(&possibleMoves).(Move)
+        move = heap.Pop(&possibleMoves).(Move)
 
         makeMove(move.pos, player)
         if debugMode {
             debug.Debug = append(debug.Debug, &Debug{move.score, 0, move.pos, player, -1, []*Debug{}})
         }
         if depth == 1 {
-            score = getFinalScore(move.pos, player)
+            //            score = move.score
+            if move.pos.Capture != nil {
+                score1 := getCaptureScore(AI) - getCaptureScore(HUMAN)
+                score2 := getScoreFor(AI, changePlayer(player), 0, BoardWidth, 0, BoardHeight) -
+                    getScoreFor(HUMAN, changePlayer(player), 0, BoardWidth, 0, BoardHeight)
+                if (player == AI && score1 > score2) ||
+                    (player == HUMAN && score1 < score2) {
+                    score = score1
+                } else {
+                    score = score2
+                }
+            } else {
+                score = getScoreFor(AI, changePlayer(player), 0, BoardWidth, 0, BoardHeight) -
+                    getScoreFor(HUMAN, changePlayer(player), 0, BoardWidth, 0, BoardHeight)
+            }
         } else {
             if debugMode {
-                score = minimax(changePlayer(player), depth-1, debug.Debug[i]).score
+                score = minimax(changePlayer(player), depth-1, debug.Debug[i], alpha, beta).score
             } else {
-                score = minimax(changePlayer(player), depth-1, nil).score
+                score = minimax(changePlayer(player), depth-1, nil, alpha, beta).score
             }
         }
         undoMove(move.pos, player)
 
-        bestScore = getBestScore(score, bestScore, player)
-        if debugMode {
-            debug.Debug[i].BestScore = bestScore
-        }
-        if score == bestScore {
+        if (player == AI && score > bestScore) ||
+            (player == HUMAN && score < bestScore) {
+            bestScore = score
             pos = move.pos
             if debugMode {
                 debug.Index = i
             }
+        }
+        if debugMode {
+            debug.Debug[i].BestScore = bestScore
+        }
+
+        if player == AI && bestScore > alpha {
+            alpha = bestScore
+        } else if player == HUMAN && bestScore < beta {
+            beta = bestScore
+        }
+
+        if beta <= alpha {
+            break
         }
     }
 

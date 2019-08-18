@@ -25,7 +25,7 @@ let AIMode = true;
 
 let cellClick = selectCell;
 const maxMoves = 150;
-const maxDepth = 4;
+const maxDepth = 10;
 
 const boardWidth = 19;
 const boardHeight = 19;
