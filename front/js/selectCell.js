@@ -52,10 +52,14 @@ function selectCell(selectedY, selectedX, color) {
         }
         showWinner(data);
       } else if (!red_pos) {
-        document.querySelector(`#y${selectedY}x${selectedX}`)
-          .classList.toggle(color);
-        if (!AIMode) {
-          currentMove({'red': 'blue', 'blue': 'red'}[currentMove()]);
+        if ((() => {for (let y = 0; y < boardHeight; y++) {for (let x = 0; x < boardWidth; x++) {const cell = document.querySelector(`#y${selectedY}x${selectedX}`);if (cell.classList.value.search('blue') === -1 && cell.classList.value.search('red') === -1) {return false;}}}return true;})()) {
+          addNotification('Draw!');
+        } else {
+          document.querySelector(`#y${selectedY}x${selectedX}`)
+            .classList.toggle(color);
+          if (!AIMode) {
+            currentMove({'red': 'blue', 'blue': 'red'}[currentMove()]);
+          }
         }
       } else {
         placePos(blue_pos, red_pos);
