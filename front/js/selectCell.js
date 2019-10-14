@@ -52,7 +52,7 @@ function selectCell(selectedY, selectedX, color) {
         }
         showWinner(data);
       } else if (!red_pos) {
-        if ((() => {for (let y = 0; y < boardHeight; y++) {for (let x = 0; x < boardWidth; x++) {const cell = document.querySelector(`#y${selectedY}x${selectedX}`);if (cell.classList.value.search('blue') === -1 && cell.classList.value.search('red') === -1) {return false;}}}return true;})()) {
+        if ((() => {for (let y = 0; y < boardHeight; y++) {for (let x = 0; x < boardWidth; x++) {const cell = document.querySelector(`#y${y}x${x}`);if (cell.classList.value.search('blue') === -1 && cell.classList.value.search('red') === -1) {return false;}}}return true;})()) {
           addNotification('Draw!');
         } else {
           document.querySelector(`#y${selectedY}x${selectedX}`)
